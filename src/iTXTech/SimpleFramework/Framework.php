@@ -40,295 +40,296 @@ use iTXTech\SimpleFramework\Util\StringUtil;
 use iTXTech\SimpleFramework\Util\Util;
 
 class Framework implements OnCompletionListener{
-	public const PROG_NAME = "SimpleFramework";
-	public const PROG_VERSION = "2.2.0";
-	public const API_LEVEL = 7;
-	public const CODENAME = "Centaur";
 
-	/** @var Framework */
-	private static $instance = null;
+    public const PROG_NAME = "SimpleFramework";
+    public const PROG_VERSION = "2.2.0";
+    public const API_LEVEL = 7;
+    public const CODENAME = "Centaur";
 
-	private static $tickInterval = 50000;
+    /** @var Framework */
+    private static $instance = null;
 
-	private $startEntry;
-	/** @var ConsoleReader */
-	private $console;
-	/** @var CommandProcessor */
-	private $commandProcessor;
-	/** @var Config */
-	private $config;
-	/** @var \ClassLoader */
-	private $classLoader;
-	/** @var Scheduler */
-	private $scheduler;
-	/** @var ModuleManager */
-	private $moduleManager;
-	/** @var Options */
-	private $options;
-	/** @var FrameworkProperties */
-	private $properties;
+    private static $tickInterval = 50000;
 
-	//Properties
-	private $shutdown = false;
-	private $displayTitle = true;
+    private $startEntry;
+    /** @var ConsoleReader */
+    private $console;
+    /** @var CommandProcessor */
+    private $commandProcessor;
+    /** @var Config */
+    private $config;
+    /** @var \ClassLoader */
+    private $classLoader;
+    /** @var Scheduler */
+    private $scheduler;
+    /** @var ModuleManager */
+    private $moduleManager;
+    /** @var Options */
+    private $options;
+    /** @var FrameworkProperties */
+    private $properties;
 
-	//
-	private $currentTick = 0;
-	private $titleQueue = [];
+    //Properties
+    private $shutdown = false;
+    private $displayTitle = true;
 
-	public function __construct(\ClassLoader $classLoader){
-		if(self::$instance === null){
-			self::$instance = $this;
-		}
-		$this->classLoader = $classLoader;
-		$this->options = new Options();
-		$this->registerDefaultOptions();
+    //
+    private $currentTick = 0;
+    private $titleQueue = [];
 
-		$this->properties = new FrameworkProperties();
-		$this->properties->dataPath = \getcwd() . DIRECTORY_SEPARATOR;
-		$this->properties->generatePath();
-	}
+    public function __construct(\ClassLoader $classLoader){
+        if(self::$instance === null){
+            self::$instance = $this;
+        }
+        $this->classLoader = $classLoader;
+        $this->options = new Options();
+        $this->registerDefaultOptions();
 
-	public function getProperties() : FrameworkProperties{
-		return $this->properties;
-	}
+        $this->properties = new FrameworkProperties();
+        $this->properties->dataPath = \getcwd() . DIRECTORY_SEPARATOR;
+        $this->properties->generatePath();
+    }
 
-	public static function getTickInterval() : int{
-		return self::$tickInterval;
-	}
+    public function getProperties() : FrameworkProperties{
+        return $this->properties;
+    }
 
-	public static function setTickInterval(int $tickInterval) : void{
-		self::$tickInterval = max($tickInterval, 0);
-	}
+    public static function getTickInterval() : int{
+        return self::$tickInterval;
+    }
 
-	public function isDisplayTitle() : bool{
-		return $this->displayTitle;
-	}
+    public static function setTickInterval(int $tickInterval) : void{
+        self::$tickInterval = max($tickInterval, 0);
+    }
 
-	public function setDisplayTitle(bool $displayTitle) : void{
-		$this->displayTitle = $displayTitle;
-	}
+    public function isDisplayTitle() : bool{
+        return $this->displayTitle;
+    }
 
-	public function getLoader(){
-		return $this->classLoader;
-	}
+    public function setDisplayTitle(bool $displayTitle) : void{
+        $this->displayTitle = $displayTitle;
+    }
 
-	public function getName() : string{
-		return self::PROG_NAME;
-	}
+    public function getLoader(){
+        return $this->classLoader;
+    }
 
-	public function getVersion() : string{
-		return self::PROG_VERSION;
-	}
+    public function getName() : string{
+        return self::PROG_NAME;
+    }
 
-	public function getCodename() : string{
-		return self::CODENAME;
-	}
+    public function getVersion() : string{
+        return self::PROG_VERSION;
+    }
 
-	public function getApi() : int{
-		return self::API_LEVEL;
-	}
+    public function getCodename() : string{
+        return self::CODENAME;
+    }
 
-	public static function getInstance() : ?Framework{
-		return self::$instance;
-	}
+    public function getApi() : int{
+        return self::API_LEVEL;
+    }
 
-	public static function isStarted() : bool{
-		return self::$instance !== null;
-	}
+    public static function getInstance() : ?Framework{
+        return self::$instance;
+    }
 
-	public function getScheduler() : ?Scheduler{
-		return $this->scheduler;
-	}
+    public static function isStarted() : bool{
+        return self::$instance !== null;
+    }
 
-	public function getModuleManager() : ?ModuleManager{
-		return $this->moduleManager;
-	}
+    public function getScheduler() : ?Scheduler{
+        return $this->scheduler;
+    }
 
-	public function getStartEntry() : string{
-		return $this->startEntry;
-	}
+    public function getModuleManager() : ?ModuleManager{
+        return $this->moduleManager;
+    }
 
-	private function registerDefaultOptions(){
-		//FREE SWITCHES
-		//i, j, k
-		//p, q
-		//t, u, w, x, y, z
-		CmdLineOpt::regAll();
-	}
+    public function getStartEntry() : string{
+        return $this->startEntry;
+    }
 
-	public function processCommandLineOptions(array $argv){
-		try{
-			CmdLineOpt::init($this->options);
-			CmdLineOpt::processAll($argv, $this->options);
-		}catch(\Throwable $e){
-			Util::println($e->getMessage());
-			$t = (new HelpFormatter())->generateHelp("sf", $this->options);
-			echo $t;
-			exit(1);
-		}
-	}
+    private function registerDefaultOptions(){
+        //FREE SWITCHES
+        //i, j, k
+        //p, q
+        //t, u, w, x, y, z
+        CmdLineOpt::regAll();
+    }
 
-	public function processPreload(array $argv) : array{
-		$this->startEntry = array_shift($argv);
-		while(isset($argv[0]) and StringUtil::startsWith($argv[0], "p=")){
-			$preload = substr(array_shift($argv), strlen("p="));
-			if(file_exists($preload)){
-				require_once $preload;
-			}
-		}
-		return $argv;
-	}
+    public function processCommandLineOptions(array $argv){
+        try{
+            CmdLineOpt::init($this->options);
+            CmdLineOpt::processAll($argv, $this->options);
+        } catch(\Throwable $e){
+            Util::println($e->getMessage());
+            $t = (new HelpFormatter())->generateHelp("sf", $this->options);
+            echo $t;
+            exit(1);
+        }
+    }
 
-	public function start(bool $useMainThreadTick = true){
-		try{
-			$this->properties->mkdirDirs();
+    public function processPreload(array $argv) : array{
+        $this->startEntry = array_shift($argv);
+        while(isset($argv[0]) and StringUtil::startsWith($argv[0], "p=")){
+            $preload = substr(array_shift($argv), strlen("p="));
+            if(file_exists($preload)){
+                require_once $preload;
+            }
+        }
+        return $argv;
+    }
 
-			set_exception_handler("\\iTXTech\\SimpleFramework\\Console\\Logger::logException");
+    public function start(bool $useMainThreadTick = true){
+        try{
+            $this->properties->mkdirDirs();
 
-			$this->config = new Config($this->properties->configPath, Config::JSON, [
-				"auto-load-modules" => true,
-				"async-workers" => 2,
-				"log-file" => "",
-				"log-level" => Logger::INFO,
-				"display-title" => true,
-				"wsmdr" => [//WraithSpireModuleDependencyResolver
-					"enabled" => true,
-					"remote-database" => "https://raw.githubusercontent.com/iTXTech/WraithSpireDatabase/master/",
-					"modules" => []
-				]
-			]);
-			$this->config->save();
-			$this->properties->mergeConfig($this->config);
+            set_exception_handler("\\iTXTech\\SimpleFramework\\Console\\Logger::logException");
 
-			Logger::setLogFile($this->config->get("log-file", ""));
-			Logger::$logLevel = $this->config->get("log-level", 1);
+            $this->config = new Config($this->properties->configPath, Config::JSON, [
+                "auto-load-modules" => true,
+                "async-workers" => 2,
+                "log-file" => "",
+                "log-level" => Logger::INFO,
+                "display-title" => true,
+                "wsmdr" => [//WraithSpireModuleDependencyResolver
+                    "enabled" => true,
+                    "remote-database" => "https://raw.githubusercontent.com/iTXTech/WraithSpireDatabase/master/",
+                    "modules" => []
+                ]
+            ]);
+            $this->config->save();
+            $this->properties->mergeConfig($this->config);
 
-			Logger::info(TextFormat::AQUA . self::PROG_NAME . " " . TextFormat::LIGHT_PURPLE .
-				self::PROG_VERSION . TextFormat::GREEN . " [" . self::CODENAME . "]");
-			Logger::info(TextFormat::GOLD . "Licensed under GNU General Public License v3.0");
+            Logger::setLogFile($this->config->get("log-file", ""));
+            Logger::$logLevel = $this->config->get("log-level", 1);
 
-			if($this->moduleManager === null){
-				$this->moduleManager = new ModuleManager($this->classLoader,
-					$this->properties->modulePath, $this->properties->moduleDataPath);
-			}
+            Logger::info(TextFormat::AQUA . self::PROG_NAME . " " . TextFormat::LIGHT_PURPLE .
+                self::PROG_VERSION . TextFormat::GREEN . " [" . self::CODENAME . "]");
+            Logger::info(TextFormat::GOLD . "Licensed under GNU General Public License v3.0");
 
-			if(!SINGLE_THREAD){
-				Logger::info("Starting ConsoleReader...");
-				$this->console = new ConsoleReader();
-			}
+            if($this->moduleManager === null){
+                $this->moduleManager = new ModuleManager($this->classLoader,
+                $this->properties->modulePath, $this->properties->moduleDataPath);
+            }
 
-			Logger::info("Starting Command Processor...");
-			$this->commandProcessor = new CommandProcessor();
-			$this->commandProcessor->registerDefaultCommands();
+            if(!SINGLE_THREAD){
+                Logger::info("Starting ConsoleReader...");
+                $this->console = new ConsoleReader();
+            }
 
-			Logger::info("Starting multi-threading scheduler...");
-			$this->scheduler = new Scheduler($this->classLoader, $this, $this->config->get("async-workers", 2));
+            Logger::info("Starting Command Processor...");
+            $this->commandProcessor = new CommandProcessor();
+            $this->commandProcessor->registerDefaultCommands();
 
-			$mdr = $this->config->get("wsmdr");
-			if($mdr["enabled"]){
-				Logger::info("Starting WraithSpire module dependency resolver...");
-				$this->moduleManager->registerModuleDependencyResolver(
-					new WraithSpireMDR($this->moduleManager, $mdr["remote-database"], $mdr["modules"]));
-			}
+            Logger::info("Starting multi-threading scheduler...");
+            $this->scheduler = new Scheduler($this->classLoader, $this, $this->config->get("async-workers", 2));
 
-			if($this->config->get("auto-load-modules", true)){
-				$this->moduleManager->loadModules();
-			}
-			$this->properties->loadModules($this->moduleManager);
+            $mdr = $this->config->get("wsmdr");
+            if($mdr["enabled"]){
+                Logger::info("Starting WraithSpire module dependency resolver...");
+                $this->moduleManager->registerModuleDependencyResolver(
+                new WraithSpireMDR($this->moduleManager, $mdr["remote-database"], $mdr["modules"]));
+            }
 
-			$this->displayTitle = $this->config->get("display-title", true);
+            if($this->config->get("auto-load-modules", true)){
+                $this->moduleManager->loadModules();
+            }
+            $this->properties->loadModules($this->moduleManager);
 
-			if(($mdr = $this->moduleManager->getModuleDependencyResolver()) != null){
-				$mdr->init();
-			}
+            $this->displayTitle = $this->config->get("display-title", true);
 
-			Logger::info("Done! Type 'help' for help.");
+            if(($mdr = $this->moduleManager->getModuleDependencyResolver()) != null){
+                $mdr->init();
+            }
 
-			$this->properties->runCommands($this->commandProcessor);
+            Logger::info("Done! Type 'help' for help.");
 
-			if($useMainThreadTick){
-				$this->tick();
-			}
-		}catch(\Throwable $e){
-			Logger::logException($e);
-		}
-	}
+            $this->properties->runCommands($this->commandProcessor);
 
-	public function shutdown(){
-		$this->shutdown = true;
-	}
+            if($useMainThreadTick){
+                $this->tick();
+            }
+        }catch(\Throwable $e){
+            Logger::logException($e);
+        }
+    }
 
-	public function getCommandProcessor() : CommandProcessor{
-		return $this->commandProcessor;
-	}
+    public function shutdown(){
+        $this->shutdown = true;
+    }
 
-	private function tick(){
-		while(!$this->shutdown){
-			$this->update();
-			usleep(self::$tickInterval);
-		}
+    public function getCommandProcessor() : CommandProcessor{
+        return $this->commandProcessor;
+    }
 
-		//shutdown!
-		$this->stop();
-	}
+    private function tick(){
+        while(!$this->shutdown){
+            $this->update();
+            usleep(self::$tickInterval);
+        }
 
-	public function update(){
-		$this->currentTick++;
-		foreach($this->moduleManager->getModules() as $module){
-			if($module->isLoaded()){
-				$module->doTick($this->currentTick);
-			}
-		}
-		$this->scheduler->mainThreadHeartbeat($this->currentTick);
-		$this->checkConsole();
-		if(($this->currentTick % 20) === 0){
-			$this->combineTitle();
-		}
-	}
+        //shutdown!
+        $this->stop();
+    }
 
-	public function stop(){
-		Logger::info("Stopping " . self::PROG_NAME . "...");
-		foreach($this->moduleManager->getModules() as $module){
-			if($module->isLoaded()){
-				$this->moduleManager->unloadModule($module);
-			}
-		}
-		//$this->config->save();
-		$this->scheduler->cancelAllTasks();
-		$this->scheduler->mainThreadHeartbeat(PHP_INT_MAX);
-		$this->console->shutdown();
-		$this->console->notify();
-	}
+    public function update(){
+        $this->currentTick++;
+        foreach($this->moduleManager->getModules() as $module){
+            if($module->isLoaded()){
+                $module->doTick($this->currentTick);
+            }
+        }
+        $this->scheduler->mainThreadHeartbeat($this->currentTick);
+        $this->checkConsole();
+        if(($this->currentTick % 20) === 0){
+            $this->combineTitle();
+        }
+    }
 
-	public static function getUptime(){
-		return Util::formatTime(microtime(true) - START_TIME);
-	}
+    public function stop(){
+        Logger::info("Stopping " . self::PROG_NAME . "...");
+        foreach($this->moduleManager->getModules() as $module){
+            if($module->isLoaded()){
+                $this->moduleManager->unloadModule($module);
+            }
+        }
+        //$this->config->save();
+        $this->scheduler->cancelAllTasks();
+        $this->scheduler->mainThreadHeartbeat(PHP_INT_MAX);
+        $this->console->shutdown();
+        $this->console->notify();
+    }
 
-	private function checkConsole(){
-		if(isset($this->console)){
-			while(($line = $this->console->getLine()) != null){
-				$this->commandProcessor->dispatchCommand($line);
-			}
-		}
-	}
+    public static function getUptime(){
+        return Util::formatTime(microtime(true) - START_TIME);
+    }
 
-	public function addTitleBlock(string $prop, string $contents){
-		$this->titleQueue[$prop] = $contents;
-	}
+    private function checkConsole(){
+        if(isset($this->console)){
+            while(($line = $this->console->getLine()) != null){
+                $this->commandProcessor->dispatchCommand($line);
+            }
+        }
+    }
 
-	private function combineTitle(){
-		if($this->displayTitle){
-			$message = "";
-			foreach($this->titleQueue as $prop => $contents){
-				$message .= " | " . $prop . " " . $contents;
-			}
-			self::displayTitle(self::PROG_NAME . $message);
-		}
-		$this->titleQueue = [];
-	}
+    public function addTitleBlock(string $prop, string $contents){
+        $this->titleQueue[$prop] = $contents;
+    }
 
-	public static function displayTitle(string $title){
-		echo "\x1b]0;" . $title . "\x07";
-	}
+    private function combineTitle(){
+        if($this->displayTitle){
+            $message = "";
+            foreach($this->titleQueue as $prop => $contents){
+                $message .= " | " . $prop . " " . $contents;
+            }
+            self::displayTitle(self::PROG_NAME . $message);
+        }
+        $this->titleQueue = [];
+    }
+
+    public static function displayTitle(string $title){
+        echo "\x1b]0;" . $title . "\x07";
+    }
 }
