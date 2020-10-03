@@ -39,7 +39,7 @@ use iTXTech\SimpleFramework\Util\FrameworkProperties;
 use iTXTech\SimpleFramework\Util\StringUtil;
 use iTXTech\SimpleFramework\Util\Util;
 
-class Framework implements OnCompletionListener{
+class Framework implements OnCompletionListener {
 
     public const PROG_NAME = "SimpleFramework";
     public const PROG_VERSION = "2.2.0";
